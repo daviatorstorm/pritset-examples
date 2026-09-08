@@ -2,3 +2,4 @@ out/
 target/
 generated-document.pdf
 *.class
+output/

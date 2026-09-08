@@ -1,13 +1,13 @@
 # Pritset Python Example
 
-This example shows how to send JSON data to the Pritset direct template process API and save the generated document as a PDF.
+This example uses the official Pritset Python SDK to generate a PDF from JSON
+data and save it locally.
 
 The project uses:
 
 - Python 3.10 or newer
-- built-in `urllib` for the HTTP request
+- `pritset` version `0.1.5`
 - `Data/dummy_data.json` as the sample document data
-- no external dependencies
 
 ## Requirements
 
@@ -17,20 +17,23 @@ The project uses:
 
 ## Configure
 
-Update the credentials in `pritset_client.py`:
+Set the required environment variables. PowerShell:
 
-```python
-token="your-access-token-here-from-https://app.pritset.com/settings",
-secret="your-secret-here-from-https://app.pritset.com/settings",
+```powershell
+$env:PRITSET_ACCESS_TOKEN = "your-access-token"
+$env:PRITSET_SECRET = "your-secret"
+$env:PRITSET_TEMPLATE_ID = "your-template-id"
 ```
 
-Then update the template ID in `main.py`:
+Bash or Zsh:
 
-```python
-result = create_request(
-    "your-template-id"
-)
+```bash
+export PRITSET_ACCESS_TOKEN="your-access-token"
+export PRITSET_SECRET="your-secret"
+export PRITSET_TEMPLATE_ID="your-template-id"
 ```
+
+Do not paste real credentials into the source files or commit them to Git.
 
 ## Data
 
@@ -40,23 +43,42 @@ The request payload comes from:
 Data/dummy_data.json
 ```
 
-`pritset_client.py` reads that file as JSON text:
+`pritset_client.py` resolves and parses that file relative to the example
+source:
 
 ```python
-data = Path("Data/dummy_data.json").read_text(encoding="utf-8")
+data_path = Path(__file__).resolve().parent / "Data" / "dummy_data.json"
+return json.loads(data_path.read_text(encoding="utf-8"))
 ```
 
 ## Run
 
 ```bash
+python -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements.txt
 python main.py
 ```
 
 If the API call succeeds, the generated PDF is saved as:
 
 ```text
-generated-document.pdf
+output/generated-document.pdf
 ```
+
+The output directory is ignored by Git. The example checks the SDK response
+content type and `%PDF-` file signature before writing the PDF.
+
+## Optional webhook generation
+
+Set `PRITSET_WEBHOOK_URL` and run:
+
+```bash
+python webhook.py
+```
+
+This submits a webhook-generation job only; it does not run or verify a
+webhook receiver.
 
 ## Project Structure
 
@@ -66,5 +88,7 @@ python/
     dummy_data.json
   main.py
   pritset_client.py
+  webhook.py
+  requirements.txt
   README.md
 ```

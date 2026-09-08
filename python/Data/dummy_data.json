@@ -1,3 +1,16 @@
 {
-    "your-json-here": "value"
+    "amount": 100,
+    "status": "cool",
+    "receiptNumber": "ASD-123",
+    "generatedAt": "2026-01-10 20:00",
+    "transactionId": "AKJFSOUHKLJH123",
+    "channel": "First",
+    "senderName": "Yurii",
+    "senderAccount": "Yurii Account",
+    "recipientName": "John",
+    "recipientAccount": "Doe company",
+    "fee": "10%",
+    "description": "Invoice payment",
+    "totalDebit": "100",
+    "reference": "AKJFSOUHKLJH123"
 }

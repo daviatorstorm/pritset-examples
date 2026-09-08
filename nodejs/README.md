@@ -1,11 +1,12 @@
 # Pritset Node.js Example
 
-This example shows how to send JSON data to the Pritset direct template process API and save the generated document as a PDF.
+This example uses the official Pritset Node.js SDK to generate a PDF from JSON
+data and save it locally.
 
 The project uses:
 
 - native ECMAScript modules
-- `axios` for the HTTP request
+- `@pritset/sdk` version `0.1.5`
 - `data/dummy_data.json` as the sample document data
 
 ## Requirements
@@ -15,28 +16,32 @@ The project uses:
 - a Pritset template ID
 - a Pritset API token and secret from https://app.pritset.com/settings
 
-## Install
+## Install and verify
 
 ```bash
-npm install
+npm ci
+npm run check
 ```
 
 ## Configure
 
-Update the credentials in `src/pritset.js`:
+Set the required environment variables. PowerShell:
 
-```js
-token: "your-access-token-here-from-https://app.pritset.com/settings",
-secret: "your-secret-here-from-https://app.pritset.com/settings",
+```powershell
+$env:PRITSET_ACCESS_TOKEN = "your-access-token"
+$env:PRITSET_SECRET = "your-secret"
+$env:PRITSET_TEMPLATE_ID = "your-template-id"
 ```
 
-Then update the template ID in `src/index.js`:
+Bash or Zsh:
 
-```js
-const result = createPritsetMessage({
-  templateId: "your-template-id",
-});
+```bash
+export PRITSET_ACCESS_TOKEN="your-access-token"
+export PRITSET_SECRET="your-secret"
+export PRITSET_TEMPLATE_ID="your-template-id"
 ```
+
+Do not paste real credentials into the source files or commit them to Git.
 
 ## Data
 
@@ -46,12 +51,11 @@ The request payload comes from:
 data/dummy_data.json
 ```
 
-`src/pritset.js` reads that file and converts it into a JavaScript object:
+`src/pritset.js` reads that file into a JavaScript object:
 
 ```js
-const data = JSON.parse(
-  readFileSync(new URL("../data/dummy_data.json", import.meta.url), "utf8")
-);
+const source = new URL("../data/dummy_data.json", import.meta.url);
+return JSON.parse(await readFile(source, "utf8"));
 ```
 
 ## Run
@@ -63,8 +67,24 @@ npm start
 If the API call succeeds, the generated PDF is saved as:
 
 ```text
-generated-document.pdf
+output/generated-document.pdf
 ```
+
+The output directory is ignored by Git. The example verifies the SDK response
+has `application/pdf` content type and that its bytes begin with `%PDF-` before
+writing the file.
+
+## Optional webhook generation
+
+To request PDF delivery to your own webhook endpoint, set
+`PRITSET_WEBHOOK_URL` and run:
+
+```bash
+npm run webhook
+```
+
+This is intentionally separate from direct PDF generation. It submits a job;
+the example does not run or verify a webhook receiver.
 
 ## Development Mode
 
@@ -80,6 +100,7 @@ nodejs/
     dummy_data.json
   src/
     index.js
+    generate-webhook.js
     pritset.js
   package.json
   README.md
