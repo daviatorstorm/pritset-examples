@@ -1,60 +1,87 @@
-import java.io.IOException;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.UUID;
+import com.pritset.sdk.BinaryResponse;
+import com.pritset.sdk.PritsetClient;
+import com.pritset.sdk.exception.PritsetApiException;
+import com.pritset.sdk.exception.PritsetException;
+import com.pritset.sdk.exception.PritsetTransportException;
 
 public final class Main {
     private Main() {
     }
 
-    public static void main(String[] args) throws Exception {
-        PritsetRequest result = PritsetClient.createRequest(
-            "your-template-id" // Replace with your actual template ID
-        );
+    public static void main(String[] args) {
+        try {
+            if (args.length == 1 && "--webhook".equals(args[0])) {
+                WebhookExample.run();
+                return;
+            }
 
-        String boundary = "----PritsetBoundary" + UUID.randomUUID();
-        byte[] body = createMultipartBody(boundary, "data", result.data());
-
-        HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(result.api()))
-            .header("Authorization", result.token())
-            .header("X-Secret", result.secret())
-            .header("Content-Type", "multipart/form-data; boundary=" + boundary)
-            .POST(HttpRequest.BodyPublishers.ofByteArray(body))
-            .build();
-
-        HttpClient httpClient = HttpClient.newHttpClient();
-        HttpResponse<byte[]> response = httpClient.send(
-            request,
-            HttpResponse.BodyHandlers.ofByteArray()
-        );
-
-        if (response.statusCode() >= 200 && response.statusCode() < 300) {
-            Files.write(Path.of("generated-document.pdf"), response.body());
-            System.out.println("Document generated successfully.");
-        } else {
-            System.out.printf("Error occurred: %d%n", response.statusCode());
-            System.out.println(new String(response.body(), StandardCharsets.UTF_8));
+            generatePdf();
+        } catch (PritsetApiException error) {
+            System.err.printf("Pritset API request failed with HTTP %d.%n", error.statusCode());
+            System.exit(1);
+        } catch (PritsetTransportException error) {
+            System.err.println("The Pritset request did not complete.");
+            System.exit(1);
+        } catch (PritsetException error) {
+            System.err.println("The Pritset request failed.");
+            System.exit(1);
+        } catch (IllegalArgumentException | IllegalStateException error) {
+            System.err.println(error.getMessage());
+            System.exit(1);
+        } catch (Exception error) {
+            System.err.println("Document generation failed.");
+            System.exit(1);
         }
     }
 
-    private static byte[] createMultipartBody(
-        String boundary,
-        String fieldName,
-        String value
-    ) throws IOException {
-        String body = "--" + boundary + "\r\n"
-            + "Content-Disposition: form-data; name=\"" + fieldName + "\"\r\n"
-            + "Content-Type: application/json; charset=utf-8\r\n\r\n"
-            + value + "\r\n"
-            + "--" + boundary + "--\r\n";
+    static void generatePdf() throws Exception {
+        try (BinaryResponse pdf = createClient().documents().generate(
+                requireEnvironmentVariable("PRITSET_TEMPLATE_ID"),
+                loadSampleData())) {
+            String contentType = pdf.contentType().orElse("");
+            if (!"application/pdf".equalsIgnoreCase(contentType)) {
+                throw new IllegalStateException(
+                    "Expected application/pdf but received "
+                        + (contentType.isBlank() ? "no content type" : contentType) + ".");
+            }
 
-        return body.getBytes(StandardCharsets.UTF_8);
+            byte[] content = pdf.readAllBytes();
+            if (content.length < 5
+                    || content[0] != '%'
+                    || content[1] != 'P'
+                    || content[2] != 'D'
+                    || content[3] != 'F'
+                    || content[4] != '-') {
+                throw new IllegalStateException("The response did not contain a valid PDF signature.");
+            }
+
+            Path outputDirectory = Path.of("output");
+            Files.createDirectories(outputDirectory);
+            Path outputPath = outputDirectory.resolve("generated-document.pdf").toAbsolutePath();
+            Files.write(outputPath, content);
+            System.out.println("Document generated successfully: " + outputPath);
+        }
+    }
+
+    static PritsetClient createClient() {
+        return PritsetClient.builder(
+                requireEnvironmentVariable("PRITSET_ACCESS_TOKEN"),
+                requireEnvironmentVariable("PRITSET_SECRET"))
+            .build();
+    }
+
+    static String loadSampleData() throws Exception {
+        return Files.readString(Path.of("Data", "dummy_data.json"));
+    }
+
+    static String requireEnvironmentVariable(String name) {
+        String value = System.getenv(name);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Set the " + name + " environment variable before running this example.");
+        }
+        return value.trim();
     }
 }
 

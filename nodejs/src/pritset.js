@@ -1,14 +1,29 @@
-import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 
-const data = JSON.parse(
-  readFileSync(new URL("../data/dummy_data.json", import.meta.url), "utf8")
-);
+import { PritsetClient } from "@pritset/sdk";
 
-export function createPritsetMessage(options = {}) {
-  return {
-    data,
-    token: "your-access-token-here-from-https://app.pritset.com/settings",
-    secret: "your-secret-here-from-https://app.pritset.com/settings",
-    api: `https://api.pritset.com/api/template/process/direct/${options.templateId}`,
-  };
+export function requireEnvironmentVariable(name) {
+  const value = process.env[name]?.trim();
+
+  if (!value) {
+    throw new Error(`Set the ${name} environment variable before running this example.`);
+  }
+
+  return value;
+}
+
+export function createPritsetClient() {
+  return new PritsetClient({
+    accessToken: requireEnvironmentVariable("PRITSET_ACCESS_TOKEN"),
+    secret: requireEnvironmentVariable("PRITSET_SECRET"),
+  });
+}
+
+export function getTemplateId() {
+  return requireEnvironmentVariable("PRITSET_TEMPLATE_ID");
+}
+
+export async function loadSampleData() {
+  const source = new URL("../data/dummy_data.json", import.meta.url);
+  return JSON.parse(await readFile(source, "utf8"));
 }

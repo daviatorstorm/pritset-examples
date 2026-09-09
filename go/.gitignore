@@ -1,0 +1,6 @@
+.env
+output/
+pritset-go-example
+pritset-go-example.exe
+.gocache/
+.gomodcache/

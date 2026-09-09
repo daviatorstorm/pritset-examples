@@ -1,0 +1,20 @@
+{
+  "name": "pritset/php-example",
+  "description": "Minimal Pritset PHP SDK consumer example.",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": "^8.3",
+    "pritset/pritset-php": "0.1.5"
+  },
+  "scripts": {
+    "check": [
+      "php -l index.php",
+      "php -l webhook.php"
+    ]
+  },
+  "config": {
+    "sort-packages": true,
+    "allow-plugins": {}
+  }
+}
